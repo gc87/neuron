@@ -168,7 +168,9 @@ static int neuron_run(const neu_cli_args_t *args)
         neu_panic("neuron process can't open pipe");
     }
 
-    nng_setopt(g_sock, NNG_OPT_RECVTIMEO, &recv_timeout, sizeof(recv_timeout));
+    // nng_setopt(g_sock, NNG_OPT_RECVTIMEO, &recv_timeout,
+    // sizeof(recv_timeout));
+    nng_socket_set_ms(g_sock, NNG_OPT_RECVTIMEO, recv_timeout);
     rv = neu_manager_init_main_adapter(g_manager, bind_main_adapter,
                                        unbind_main_adapter);
 

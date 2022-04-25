@@ -53,7 +53,6 @@ struct mqtt_nng_client {
     nng_socket               sock;
     nng_dialer               dialer;
     char *                   url;
-    nng_mqtt_cb              callback;
     nng_msg *                connect_msg;
     int                      connected;
     char *                   ca;
@@ -72,7 +71,7 @@ struct string {
 static neu_err_code_e client_subscribe_send(mqtt_nng_client_t *     client,
                                             struct subscribe_tuple *tuple);
 
-static void client_on_connected(void *arg, nng_msg *ack_msg)
+void client_on_connected(void *arg, nng_msg *ack_msg)
 {
     mqtt_nng_client_t *client = (mqtt_nng_client_t *) arg;
     uint8_t            status = nng_mqtt_msg_get_connack_return_code(ack_msg);
@@ -90,7 +89,7 @@ static void client_on_connected(void *arg, nng_msg *ack_msg)
     }
 }
 
-static void client_on_disconnected(void *arg, nng_msg *msg)
+void client_on_disconnected(void *arg, nng_msg *msg)
 {
     mqtt_nng_client_t *client = (mqtt_nng_client_t *) arg;
     client->connected         = 0;
@@ -260,30 +259,29 @@ static mqtt_nng_client_t *client_create(const neu_mqtt_option_t *option,
     nng_mtx_alloc(&client->mtx);
     client->running = true;
 
-    if (NULL != client->option->cert) {
-        struct string str = client_file_load(client->option->cert);
-        client->cert      = (char *) str.data;
-    }
+    // if (NULL != client->option->cert) {
+    //     struct string str = client_file_load(client->option->cert);
+    //     client->cert      = (char *) str.data;
+    // }
 
-    if (NULL != client->option->key) {
-        struct string str = client_file_load(client->option->key);
-        client->key       = (char *) str.data;
-    }
+    // if (NULL != client->option->key) {
+    //     struct string str = client_file_load(client->option->key);
+    //     client->key       = (char *) str.data;
+    // }
 
-    if (NULL != client->option->keypass) {
-        client->keypass = strdup(client->option->keypass);
-    }
+    // if (NULL != client->option->keypass) {
+    //     client->keypass = strdup(client->option->keypass);
+    // }
 
-    if (NULL != client->option->ca_file) {
-        struct string str = client_file_load(client->option->ca_file);
-        client->ca        = (char *) str.data;
-    }
+    // if (NULL != client->option->ca) {
+    //     struct string str = client_file_load(client->option->ca);
+    //     client->ca        = (char *) str.data;
+    // }
 
-    client->callback.name            = "neuron_client";
-    client->callback.on_connected    = client_on_connected;
-    client->callback.on_disconnected = client_on_disconnected;
-    client->callback.connect_arg     = client;
-    client->callback.disconn_arg     = client;
+    client->ca      = client->option->ca;
+    client->cert    = client->option->cert;
+    client->key     = client->option->key;
+    client->keypass = client->option->keypass;
 
     TAILQ_INIT(&client->head);
     return client;
@@ -354,6 +352,7 @@ static void client_connect(mqtt_nng_client_t *client)
                                            client->option->MQTT_version);
     nng_mqtt_msg_set_connect_keep_alive(client->connect_msg,
                                         client->option->keepalive);
+    nng_mqtt_msg_set_connect_clean_session(client->connect_msg, true);
 
     if (NULL != client->option->username && NULL != client->option->password) {
         nng_mqtt_msg_set_connect_user_name(client->connect_msg,
@@ -379,10 +378,11 @@ static void client_connect(mqtt_nng_client_t *client)
         log_info("%s", buff);
     }
 
-    // Connect msg would be free when client disconnected
+    nng_mqtt_set_connect_cb(client->sock, client_on_connected, client);
+    nng_mqtt_set_disconnect_cb(client->sock, client_on_disconnected, client);
+
     nng_dialer_set_ptr(client->dialer, NNG_OPT_MQTT_CONNMSG,
                        client->connect_msg);
-    nng_dialer_set_cb(client->dialer, &client->callback);
     nng_dialer_start(client->dialer, NNG_FLAG_NONBLOCK);
 }
 
@@ -657,12 +657,14 @@ static void client_destroy(mqtt_nng_client_t *client)
 
 neu_err_code_e mqtt_nng_client_suspend(mqtt_nng_client_t *client)
 {
+    UNUSED(client);
     // TODO: suspend logic
     return NEU_ERR_SUCCESS;
 }
 
 neu_err_code_e mqtt_nng_client_continue(mqtt_nng_client_t *client)
 {
+    UNUSED(client);
     // TODO: continue logic
     return NEU_ERR_SUCCESS;
 }
