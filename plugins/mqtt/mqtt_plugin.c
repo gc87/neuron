@@ -126,6 +126,10 @@ static void topics_generate(UT_array *topics, neu_plugin_t *plugin,
     topics_add(topics, plugin, write_req, QOS0, write_res, QOS0,
                TOPIC_TYPE_WRITE);
 
+    // Test Topic
+    char *test_req = topics_format("%s", "/v1/nari/service/command");
+    topics_add(topics, plugin, test_req, QOS0, NULL, QOS0, TOPIC_TYPE_TEST);
+
     /// UPLOAD TOPIC SETTING
     char *upload_res = strdup(option->upload_topic);
     topics_add(topics, plugin, NULL, QOS0, upload_res, QOS0, TOPIC_TYPE_UPLOAD);
